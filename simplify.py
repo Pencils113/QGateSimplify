@@ -81,27 +81,61 @@ clifford_pauli_dict = {
     "H_XY SQRT_Y_DAG" : np.matmul(gate_dict["H_XY"], gate_dict["SQRT_Y_DAG"]),
 }
 
+def kronecker(A, B):
+    '''
+    Performs Kronecker product on input matrices A and B
+    '''
+    C = [[0] * (len(A[0]) * len(B[0])) for i in range((len(A) * len(B)))]
+
+    for i in range(len(A) * len(B)):
+        for j in range(len(A[0]) * len(B[0])):
+            C[i][j] = A[i // len(B)][j // len(B[0])] * B[i % len(B)][j % len(B[0])]
+
+    return np.array(C)
 
 def decode(gate):
+    '''
+    Attempts to find symbolic representation of matrix
+    '''
     coeff_decode = {1: "", -1: "-", 1j: "j", -1j: "-j"}
     for gates in [gate_dict, clifford_pauli_dict]:
         for coeff in [1, -1, 1j, -1j]:
             for key in gates.keys():
-                if np.allclose(gate, coeff * gates[key]):
-                    return coeff_decode[coeff] + key
-    
+                if len(gates[key]) == len(gate):
+                    if np.allclose(gate, coeff * gates[key]):
+                        return coeff_decode[coeff] + key
         
     return gate
 
-
-def simplify(str_i, raw=False):
-    ins = str_i.replace('j', 'jI').replace('II', 'I').split(' ')
+def kronecker_simplify(str_i):
+    '''
+    Computes nested tensor products
+    '''
+    ins = str_i.split('*')
     for i in range(len(ins)):
         ins[i] = gate_dict[ins[i]]
 
-    result = gate_dict["I"]
+    result = ins[0]
 
-    for gate in ins:
+    for gate in ins[1:]:
+        result = kronecker(result, gate)
+
+    return result
+
+def simplify(str_i, raw=False):
+    '''
+    Parses input and computes matrix product
+    '''
+    ins = str_i.replace('j', 'jI').replace('II', 'I').split(' ')
+    for i in range(len(ins)):
+        if '*' in ins[i]:
+            ins[i] = kronecker_simplify(ins[i])
+        else:
+            ins[i] = gate_dict[ins[i]]
+
+    result = ins[0]
+
+    for gate in ins[1:]:
         result = np.matmul(result, gate)
 
     if not raw:

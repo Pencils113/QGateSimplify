@@ -1,7 +1,12 @@
 from simplify import simplify, gate_dict
+import numpy as np
 
 def test(test_str):
-    print(f"{test_str} = {simplify(test_str)}")
+    out = simplify(test_str)
+    if type(out) is np.ndarray and len(out.shape) > 1:
+        print(f"{test_str} = \n{out}")
+    else:
+        print(f"{test_str} = {out}")
 
 if __name__=="__main__":
     test("H H")
@@ -14,6 +19,9 @@ if __name__=="__main__":
     test("j H Y H")
     test("j I")
     test("I j")
+    test("X*X")
+    test("I*I X*X I*I")
+    test("H*H Z*Z H*H")
 
     # Identities:
     for gate in gate_dict.keys():
